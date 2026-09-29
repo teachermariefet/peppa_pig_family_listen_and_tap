@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Family Vocabulary Game</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Balsamiq Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Balsamiq+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+    <!-- FontAwesome icons for buttons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        * {
+            font-family: 'Balsamiq Sans', cursive, sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        /* Home Screen background fallback */
+        .bg-home-screen {
+            background-color: #60a5fa;
+            background-image: url('homescreen.png'), linear-gradient(135deg, #a5f3fc 0%, #3b82f6 100%);
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        /* Gameplay Screen background fallback */
+        .bg-game-screen {
+            background-color: #fef08a;
+            background-image: url('gamescreen.png'), linear-gradient(135deg, #fef9c3 0%, #fde047 50%, #f97316 100%);
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        /* SmartBoard giant button styles with shadow depth */
+        .btn-smartboard {
+            box-shadow: 0 10px 0 #1d4ed8, 0 15px 25px rgba(0, 0, 0, 0.3);
+            transition: all 0.1s ease;
+        }
+        .btn-smartboard:active {
+            transform: translateY(6px);
+            box-shadow: 0 4px 0 #1d4ed8, 0 8px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-green-smartboard {
+            box-shadow: 0 10px 0 #15803d, 0 15px 25px rgba(0, 0, 0, 0.3);
+            transition: all 0.1s ease;
+        }
+        .btn-green-smartboard:active {
+            transform: translateY(6px);
+            box-shadow: 0 4px 0 #15803d, 0 8px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-choice {
+            box-shadow: 0 12px 0 rgba(0,0,0,0.15), 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+            transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+        }
+        .card-choice:hover {
+            transform: scale(1.02);
+        }
+        .card-choice:active {
+            transform: scale(0.97);
+        }
+
+        /* Animated pulse for mission box */
+        @keyframes pulse-subtle {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+        }
+        .animate-pulse-subtle {
+            animation: pulse-subtle 2s infinite;
+        }
+
+        /* Correct / Incorrect animation overlays */
+        @keyframes pop-in {
+            0% { transform: scale(0.5); opacity: 0; }
+            80% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop {
+            animation: pop-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-800 h-screen w-screen overflow-hidden flex flex-col justify-between select-none">
+
+    <!-- Global Top Utility Bar -->
+    <header class="absolute top-3 right-3 z-50 flex items-center gap-3">
+        <button id="fullscreen-btn" onclick="toggleFullscreen()" class="bg-white/90 hover:bg-white text-slate-800 font-bold px-4 py-3 rounded-2xl shadow-lg border-4 border-slate-300 flex items-center gap-2 text-xl active:scale-95 transition-transform" title="Toggle Fullscreen">
+            <i class="fa-solid fa-expand text-2xl text-indigo-600"></i>
+            <span class="hidden sm:inline">Maximize Screen</span>
+        </button>
+    </header>
+
+    <!-- 1. HOME SCREEN -->
+    <section id="home-screen" class="w-full h-full bg-home-screen flex flex-col items-center justify-between p-6 sm:p-10 relative">
+        <div class="mt-8 sm:mt-12 text-center max-w-4xl bg-white/85 backdrop-blur-md p-8 sm:p-12 rounded-3xl border-8 border-white shadow-2xl">
+            <h1 class="text-5xl sm:text-7xl font-extrabold text-blue-600 drop-shadow-md tracking-wide mb-4">
+                Family Words!
+            </h1>
+            <p class="text-2xl sm:text-3xl text-slate-700 font-bold">
+                Listen and tap the correct family member!
+            </p>
+        </div>
+
+        <div class="mb-12 sm:mb-20 text-center w-full max-w-md">
+            <button onclick="startGame()" class="btn-green-smartboard w-full bg-emerald-500 hover:bg-emerald-400 text-white font-extrabold text-4xl sm:text-6xl py-8 px-10 rounded-3xl border-4 border-emerald-200 flex items-center justify-center gap-4 cursor-pointer">
+                <i class="fa-solid fa-play"></i>
+                <span>START</span>
+            </button>
+        </div>
+    </section>
+
+    <!-- 2. GAMEPLAY SCREEN -->
+    <section id="gameplay-screen" class="hidden w-full h-full bg-game-screen flex flex-col justify-between p-4 sm:p-8 relative">
+        
+        <!-- Top HUD Area -->
+        <div class="w-full max-w-6xl mx-auto flex justify-between items-center gap-4 z-10 pt-2">
+            <!-- Score Counter -->
+            <div class="bg-amber-400 border-4 border-white shadow-xl rounded-2xl px-6 py-3 flex items-center gap-3">
+                <span class="text-xl sm:text-2xl font-black text-amber-900 uppercase">Score:</span>
+                <span id="score-display" class="text-4xl sm:text-6xl font-black text-white drop-shadow">0</span>
+            </div>
+
+            <!-- Audio Replay Target Button -->
+            <button onclick="replayTargetAudio()" class="bg-indigo-500 hover:bg-indigo-400 active:scale-95 text-white font-bold p-4 sm:px-6 sm:py-4 rounded-2xl shadow-xl border-4 border-white flex items-center gap-3 text-xl sm:text-2xl transition-transform" title="Listen Again">
+                <i class="fa-solid fa-volume-high text-3xl sm:text-4xl"></i>
+                <span class="hidden md:inline">Listen Again</span>
+            </button>
+
+            <!-- 60-Second Timer -->
+            <div class="bg-rose-500 border-4 border-white shadow-xl rounded-2xl px-6 py-3 flex items-center gap-3">
+                <i class="fa-solid fa-clock text-white text-3xl sm:text-4xl"></i>
+                <span id="timer-display" class="text-4xl sm:text-6xl font-black text-white drop-shadow w-20 text-center">60</span>
+            </div>
+        </div>
+
+        <!-- Mission Box Center Header -->
+        <div class="w-full flex justify-center my-2 sm:my-4 z-10">
+            <div class="bg-white/95 border-8 border-sky-400 shadow-2xl rounded-3xl px-8 py-4 text-center animate-pulse-subtle max-w-xl w-11/12">
+                <div class="text-lg sm:text-xl font-extrabold text-sky-600 uppercase tracking-wider mb-1">Mission</div>
+                <!-- Word in LOWERCASE mandatory rule -->
+                <div id="mission-word" class="text-5xl sm:text-7xl font-black text-slate-800 tracking-wide">
+                    daddy
+                </div>
+            </div>
+        </div>
+
+        <!-- Two Interactive Large Image Cards for SmartBoard -->
+        <div class="w-full max-w-5xl mx-auto grid grid-cols-2 gap-6 sm:gap-12 my-auto z-10 px-2 sm:px-6">
+            
+            <!-- Choice Box 1 -->
+            <div id="choice-card-0" onclick="handleChoiceSelect(0)" class="card-choice bg-white rounded-3xl border-8 border-slate-200 p-4 sm:p-8 flex items-center justify-center cursor-pointer h-64 sm:h-96 relative bg-contain bg-center bg-no-repeat overflow-hidden">
+                <img id="choice-img-0" src="" alt="Vocabulary Choice 1" class="max-h-full max-w-full object-contain pointer-events-none" onerror="handleImageError(this)">
+            </div>
+
+            <!-- Choice Box 2 -->
+            <div id="choice-card-1" onclick="handleChoiceSelect(1)" class="card-choice bg-white rounded-3xl border-8 border-slate-200 p-4 sm:p-8 flex items-center justify-center cursor-pointer h-64 sm:h-96 relative bg-contain bg-center bg-no-repeat overflow-hidden">
+                <img id="choice-img-1" src="" alt="Vocabulary Choice 2" class="max-h-full max-w-full object-contain pointer-events-none" onerror="handleImageError(this)">
+            </div>
+            
+        </div>
+
+        <!-- Interactive Feedback Toast / Overlay message -->
+        <div id="feedback-box" class="hidden absolute inset-0 z-40 bg-black/40 backdrop-blur-xs flex items-center justify-center pointer-events-none">
+            <div id="feedback-content" class="animate-pop bg-white border-8 rounded-3xl p-8 sm:p-12 shadow-2xl text-center max-w-md">
+                <div id="feedback-icon" class="text-7xl sm:text-9xl mb-4"></div>
+                <div id="feedback-text" class="text-4xl sm:text-6xl font-black"></div>
+            </div>
+        </div>
+
+        <!-- Spacer for balanced height -->
+        <div class="h-2"></div>
+    </section>
+
+    <!-- 3. GAME OVER SCREEN -->
+    <section id="gameover-screen" class="hidden w-full h-full bg-home-screen flex flex-col items-center justify-center p-6 relative">
+        <div class="bg-white/95 border-8 border-amber-400 shadow-2xl rounded-3xl p-8 sm:p-12 text-center max-w-2xl w-full flex flex-col items-center gap-6 animate-pop">
+            <h2 class="text-5xl sm:text-7xl font-black text-amber-500 drop-shadow">TIME'S UP!</h2>
+            
+            <div class="bg-amber-100 border-4 border-amber-300 rounded-2xl p-6 w-full my-2">
+                <div class="text-2xl sm:text-3xl font-bold text-amber-800 mb-2">Final Score</div>
+                <div id="final-score" class="text-7xl sm:text-9xl font-black text-amber-600">0</div>
+            </div>
+
+            <button onclick="startGame()" class="btn-green-smartboard w-full bg-emerald-500 hover:bg-emerald-400 text-white font-extrabold text-4xl sm:text-5xl py-6 px-8 rounded-3xl border-4 border-emerald-200 flex items-center justify-center gap-4 cursor-pointer mt-4">
+                <i class="fa-solid fa-rotate-right"></i>
+                <span>PLAY AGAIN</span>
+            </button>
+        </div>
+    </section>
+
+    <script>
+        /*
+         * Vocabulary dataset mapping (relative file paths)
+         */
+        const VOCABULARY = [
+            { word: 'daddy', audio: 'daddy.mp3', image: 'daddy.png', color: '#3b82f6' },
+            { word: 'mommy', audio: 'mommy.mp3', image: 'mommy.png', color: '#ec4899' },
+            { word: 'sister', audio: 'sister.mp3', image: 'sister.png', color: '#a855f7' },
+            { word: 'brother', audio: 'brother.mp3', image: 'brother.png', color: '#10b981' },
+            { word: 'baby', audio: 'baby.mp3', image: 'baby.png', color: '#f59e0b' }
+        ];
+
+        // Game state variables
+        let score = 0;
+        let timeLeft = 60;
+        let timerInterval = null;
+        let currentTarget = null;
+        let lastTargetWord = null; // Track last target word to prevent back-to-back repeats
+        let currentChoices = [];
+        let isAnswerLocked = false;
+        let bgmAudio = null;
+        let isAudioPlaying = false;
+
+        // Audio caching objects
+        const audioCache = {};
+
+        // Preload vocabulary audio objects
+        VOCABULARY.forEach(item => {
+            const audio = new Audio(item.audio);
+            audio.preload = 'auto';
+            audioCache[item.word] = audio;
+        });
+
+        /*
+         * Synthetic Background Music & Sound Effects Synthesizer (Web Audio API)
+         * Ensures continuous smooth 10% volume BGM and kid-friendly buzzer sound
+         */
+        let audioCtx = null;
+        let bgmInterval = null;
+
+        function initAudioContext() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        // Kid-friendly buzzing sound effect for incorrect answers
+        function playBuzzerSound() {
+            try {
+                initAudioContext();
+                if (!audioCtx || audioCtx.state !== 'running') return;
+
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+
+                // Sawtooth wave for a distinct buzz
+                osc.type = 'sawtooth';
+                
+                // Frequency drop for a soft kid-friendly "uh-oh" buzz
+                osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.25);
+
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.25);
+            } catch (e) {
+                console.log('Error playing buzzer sound:', e);
+            }
+        }
+
+        function startSyntheticBGM() {
+            try {
+                initAudioContext();
+
+                if (bgmInterval) clearInterval(bgmInterval);
+
+                // Play soft cheerful melodic loop at 10% master volume
+                const notes = [261.63, 329.63, 392.00, 523.25, 392.00, 329.63]; // C4, E4, G4, C5...
+                let noteIndex = 0;
+
+                bgmInterval = setInterval(() => {
+                    if (!audioCtx || audioCtx.state !== 'running') return;
+
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(notes[noteIndex], audioCtx.currentTime);
+
+                    // 10% volume restriction
+                    gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.4);
+
+                    noteIndex = (noteIndex + 1) % notes.length;
+                }, 500);
+            } catch (e) {
+                console.log('Web Audio BGM initialized fallback', e);
+            }
+        }
+
+        function stopSyntheticBGM() {
+            if (bgmInterval) {
+                clearInterval(bgmInterval);
+                bgmInterval = null;
+            }
+        }
+
+        function showScreen(screenId) {
+            document.getElementById('home-screen').classList.add('hidden');
+            document.getElementById('gameplay-screen').classList.add('hidden');
+            document.getElementById('gameover-screen').classList.add('hidden');
+
+            document.getElementById(screenId).classList.remove('hidden');
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.log(`Error attempting to enable fullscreen: ${err.message}`);
+                });
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+
+        // Handle SVG placeholder generation if image files are missing
+        function handleImageError(imgElem) {
+            const word = imgElem.getAttribute('data-word') || 'family';
+            // Simple colorful SVG fallback placeholder with word initial
+            const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300">
+                <rect width="100%" height="100%" fill="#f3f4f6" rx="20"/>
+                <circle cx="150" cy="120" r="60" fill="#cbd5e1"/>
+                <path d="M 70 260 C 70 190, 230 190, 230 260 Z" fill="#cbd5e1"/>
+                <text x="150" y="280" font-family="Balsamiq Sans, sans-serif" font-size="28" font-weight="bold" fill="#475569" text-anchor="middle">${word}</text>
+            </svg>`;
+            imgElem.src = 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+        }
+
+        function startGame() {
+            // Reset score and game state
+            score = 0;
+            timeLeft = 60;
+            isAnswerLocked = false;
+            lastTargetWord = null; // Clear previous round tracking
+
+            document.getElementById('score-display').textContent = score;
+            document.getElementById('timer-display').textContent = timeLeft;
+
+            showScreen('gameplay-screen');
+
+            // Start background music
+            startSyntheticBGM();
+
+            // Start countdown timer
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                document.getElementById('timer-display').textContent = timeLeft;
+
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+            }, 1000);
+
+            // Generate first round
+            nextQuestion();
+        }
+
+        function nextQuestion() {
+            if (timeLeft <= 0) return;
+
+            isAnswerLocked = false;
+            hideFeedback();
+
+            // 1. Pick 1 target word (ensuring no back-to-back repetition)
+            let availableTargets = VOCABULARY;
+            if (lastTargetWord) {
+                availableTargets = VOCABULARY.filter(item => item.word !== lastTargetWord);
+            }
+            const targetIndex = Math.floor(Math.random() * availableTargets.length);
+            currentTarget = availableTargets[targetIndex];
+            lastTargetWord = currentTarget.word; // Remember for next question
+
+            // 2. Pick 1 distractor from remaining 4 words
+            const remaining = VOCABULARY.filter(item => item.word !== currentTarget.word);
+            const distractor = remaining[Math.floor(Math.random() * remaining.length)];
+
+            // 3. Randomize left/right placement
+            currentChoices = Math.random() < 0.5 ? [currentTarget, distractor] : [distractor, currentTarget];
+
+            // 4. Update Mission Box (lowercase word)
+            document.getElementById('mission-word').textContent = currentTarget.word.toLowerCase();
+
+            // 5. Update image choices without text labels underneath
+            for (let i = 0; i < 2; i++) {
+                const imgElem = document.getElementById(`choice-img-${i}`);
+                const cardElem = document.getElementById(`choice-card-${i}`);
+                
+                imgElem.setAttribute('data-word', currentChoices[i].word);
+                imgElem.src = currentChoices[i].image;
+                
+                // Reset card styling
+                cardElem.className = "card-choice bg-white rounded-3xl border-8 border-slate-200 p-4 sm:p-8 flex items-center justify-center cursor-pointer h-64 sm:h-96 relative overflow-hidden";
+            }
+
+            // 6. Automatically play matching target audio
+            playTargetAudio();
+        }
+
+        function playTargetAudio() {
+            if (!currentTarget) return;
+            const audio = audioCache[currentTarget.word];
+            if (audio) {
+                audio.currentTime = 0;
+                audio.play().catch(e => {
+                    console.log('Audio playback prevented by autoplay restriction:', e);
+                });
+            }
+        }
+
+        function replayTargetAudio() {
+            playTargetAudio();
+        }
+
+        function handleChoiceSelect(index) {
+            if (isAnswerLocked || timeLeft <= 0) return;
+
+            const selected = currentChoices[index];
+            const cardElem = document.getElementById(`choice-card-${index}`);
+
+            if (selected.word === currentTarget.word) {
+                // CORRECT ANSWER
+                isAnswerLocked = true; // Prevent multiple scoring on quick repeated taps
+                score += 1;
+                document.getElementById('score-display').textContent = score;
+
+                // Visual feedback card
+                cardElem.classList.remove('border-slate-200');
+                cardElem.classList.add('border-emerald-500', 'bg-emerald-50');
+
+                showFeedback(true);
+
+                // Short delay (~1s) before next question
+                setTimeout(() => {
+                    nextQuestion();
+                }, 1000);
+
+            } else {
+                // INCORRECT ANSWER
+                playBuzzerSound(); // Play soft kid-friendly buzzing sound
+
+                cardElem.classList.remove('border-slate-200');
+                cardElem.classList.add('border-rose-400', 'bg-rose-50');
+
+                showFeedback(false);
+
+                // Allow player to tap again after short overlay fade
+                setTimeout(() => {
+                    cardElem.classList.remove('border-rose-400', 'bg-rose-50');
+                    cardElem.classList.add('border-slate-200');
+                    hideFeedback();
+                }, 800);
+            }
+        }
+
+        function showFeedback(isCorrect) {
+            const feedbackBox = document.getElementById('feedback-box');
+            const feedbackContent = document.getElementById('feedback-content');
+            const feedbackIcon = document.getElementById('feedback-icon');
+            const feedbackText = document.getElementById('feedback-text');
+
+            if (isCorrect) {
+                feedbackContent.className = "animate-pop bg-white border-8 border-emerald-400 rounded-3xl p-8 sm:p-12 shadow-2xl text-center max-w-md";
+                feedbackIcon.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-500"></i>`;
+                feedbackText.className = "text-4xl sm:text-6xl font-black text-emerald-600";
+                feedbackText.textContent = "GREAT!";
+            } else {
+                feedbackContent.className = "animate-pop bg-white border-8 border-rose-400 rounded-3xl p-8 sm:p-12 shadow-2xl text-center max-w-md";
+                feedbackIcon.innerHTML = `<i class="fa-solid fa-circle-xmark text-rose-500"></i>`;
+                feedbackText.className = "text-4xl sm:text-6xl font-black text-rose-600";
+                feedbackText.textContent = "TRY AGAIN!";
+            }
+
+            feedbackBox.classList.remove('hidden');
+        }
+
+        function hideFeedback() {
+            document.getElementById('feedback-box').classList.add('hidden');
+        }
+
+        function endGame() {
+            if (timerInterval) clearInterval(timerInterval);
+            stopSyntheticBGM();
+
+            document.getElementById('final-score').textContent = score;
+            showScreen('gameover-screen');
+        }
+    </script>
+</body>
+</html>
